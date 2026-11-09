@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Sparkles, Sun, Moon, Bell, ChevronDown } from 'lucide-react';
+import React from 'react';
+import { Sparkles, Sun, Moon } from 'lucide-react';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
@@ -7,8 +7,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({ theme, onToggleTheme }) => {
-  const [hasUnread, setHasUnread] = useState(true);
-
   return (
     <header className="app-header">
       <div className="header-left">
@@ -38,31 +36,6 @@ export const Header: React.FC<HeaderProps> = ({ theme, onToggleTheme }) => {
             <Moon size={14} strokeWidth={2.5} />
           </div>
         </button>
-
-        {/* Notifications Button */}
-        <div className="header-btn-wrap">
-          <button
-            type="button"
-            className="icon-btn notif-btn"
-            onClick={() => setHasUnread(false)}
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <Bell size={18} />
-            {hasUnread && <span className="notif-dot" />}
-          </button>
-        </div>
-
-        {/* User Profile Pill */}
-        <div className="profile-wrapper">
-          <div className="profile-pill-btn">
-            <div className="profile-avatar">
-              <span>VV</span>
-            </div>
-            <span className="profile-name">Vishnu Vijayakumar</span>
-            <ChevronDown size={14} className="chevron-icon" />
-          </div>
-        </div>
       </div>
     </header>
   );

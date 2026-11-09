@@ -1,5 +1,6 @@
 import React from 'react';
-import { Sparkles, Sun, Moon } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
+import { LampToggle } from './LampToggle';
 
 interface HeaderProps {
   theme: 'light' | 'dark';
@@ -20,22 +21,8 @@ export const Header: React.FC<HeaderProps> = ({ theme, onToggleTheme }) => {
       </div>
 
       <div className="header-right">
-        {/* Sun / Moon Theme Toggle */}
-        <button
-          type="button"
-          className="theme-toggle-pill"
-          onClick={onToggleTheme}
-          title={`Switch to ${theme === 'light' ? 'Dark' : 'Light'} mode`}
-          aria-label="Toggle theme"
-        >
-          <div className={`theme-icon sun-icon ${theme === 'light' ? 'active-icon' : ''}`}>
-            <Sun size={15} strokeWidth={2.5} />
-          </div>
-          <div className={`theme-thumb ${theme === 'dark' ? 'thumb-right' : 'thumb-left'}`} />
-          <div className={`theme-icon moon-icon ${theme === 'dark' ? 'active-icon' : ''}`}>
-            <Moon size={14} strokeWidth={2.5} />
-          </div>
-        </button>
+        {/* Interactive Hanging Lamp Theme Switch */}
+        <LampToggle theme={theme} onToggleTheme={onToggleTheme} />
       </div>
     </header>
   );

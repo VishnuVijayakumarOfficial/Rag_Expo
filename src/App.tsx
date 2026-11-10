@@ -14,6 +14,7 @@ export function App() {
   const [activeRagKey, setActiveRagKey] = useState<RagTypeKey>('native');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [activeDocument, setActiveDocument] = useState<string | null>(null);
 
   const currentRagData = RAG_DATA_MAP[activeRagKey];
 
@@ -44,6 +45,7 @@ export function App() {
           <div className="chat-workspace-full">
             <ChatCard
               currentRag={currentRagData}
+              activeDocument={activeDocument}
               onOpenUpload={() => setIsUploadOpen(true)}
               onSelectRagType={setActiveRagKey}
             />
@@ -58,6 +60,7 @@ export function App() {
       <UploadModal
         isOpen={isUploadOpen}
         onClose={() => setIsUploadOpen(false)}
+        onDocumentIndexed={(docName) => setActiveDocument(docName)}
       />
     </div>
   );

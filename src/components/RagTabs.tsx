@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { RAG_TYPES_LIST } from '../data/ragData';
 import type { RagTypeKey } from '../types';
 import { DynamicIcon } from './DynamicIcon';
@@ -12,9 +12,25 @@ interface RagTabsProps {
 export const RagTabs: React.FC<RagTabsProps> = ({ activeType, onSelectType }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Enable horizontal mouse-wheel scrolling
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        el.scrollLeft += e.deltaY;
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
   const scroll = (direction: 'left' | 'right') => {
     if (scrollRef.current) {
-      const offset = direction === 'left' ? -200 : 200;
+      const offset = direction === 'left' ? -220 : 220;
       scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
     }
   };

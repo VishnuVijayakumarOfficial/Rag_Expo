@@ -7,7 +7,10 @@ import {
   FileUp,
   AlertCircle,
   Trash2,
+  Database,
+  Layers,
 } from 'lucide-react';
+import { uploadDocument, type DocumentUploadResponse } from '../services/api';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -26,6 +29,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [status, setStatus] = useState<'idle' | 'processing' | 'done'>('idle');
   const [progress, setProgress] = useState(0);
   const [progressStage, setProgressStage] = useState('Preparing document...');
+  const [uploadResult, setUploadResult] = useState<DocumentUploadResponse | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -50,7 +54,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     const hasValidExt = validExtensions.some((ext) => fileName.endsWith(ext));
 
     if (!hasValidExt) {
-      setErrorMessage('Unsupported format. Please upload a PDF, DOCX, TXT, Markdown, or CSV file.');
+      setErrorMessage('Unsupported format. Please upload a PDF, DOCX, TXT, Markdown, CSV, or JSON file.');
       return;
     }
 
@@ -58,6 +62,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setSelectedFile(file);
     setStatus('idle');
     setProgress(0);
+    setUploadResult(null);
   };
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,48 +100,57 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setErrorMessage(null);
     setStatus('idle');
     setProgress(0);
+    setUploadResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
-  const handleStartIndexing = () => {
+  const handleStartIndexing = async () => {
     if (!selectedFile) return;
 
-    setStatus('processing');
-    setProgress(15);
-    setProgressStage('Parsing document text & extracting content...');
+    try {
+      setStatus('processing');
+      setProgress(25);
+      setProgressStage('Uploading document to RAG backend...');
+      setErrorMessage(null);
 
-    const timer1 = setTimeout(() => {
-      setProgress(50);
-      setProgressStage('Extracting content and semantic chunking...');
-    }, 350);
+      // Trigger actual upload & indexing on backend
+      const progressTimer = setTimeout(() => {
+        setProgress(65);
+        setProgressStage('Extracting text, chunking & generating vector embeddings in database...');
+      }, 600);
 
-    const timer2 = setTimeout(() => {
-      setProgress(85);
-      setProgressStage('Generating vector embeddings...');
-    }, 750);
+      const result = await uploadDocument(selectedFile);
+      clearTimeout(progressTimer);
 
-    const timer3 = setTimeout(() => {
+      const fileDetail = result.details?.[0];
+      if (fileDetail && fileDetail.status === 'error') {
+        throw new Error(fileDetail.error || 'Failed to process document');
+      }
+
       setProgress(100);
       setStatus('done');
       setProgressStage('Indexing complete! Stored in vector database.');
+      setUploadResult(result);
       onDocumentIndexed?.(selectedFile.name);
-    }, 1100);
-
-    return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-    };
+    } catch (err) {
+      setStatus('idle');
+      setProgress(0);
+      const msg = err instanceof Error ? err.message : 'Upload failed';
+      setErrorMessage(`${msg}. Ensure the RAG backend server is running on port 8000.`);
+    }
   };
 
   const handleCloseModal = () => {
     setStatus('idle');
     setProgress(0);
     setErrorMessage(null);
+    setUploadResult(null);
     onClose();
   };
+
+  const firstDetail = uploadResult?.details?.[0];
 
   return (
     <div className="modal-backdrop" onClick={handleCloseModal}>
@@ -149,7 +163,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
             <div>
               <h3 className="modal-title">Upload Knowledge Document</h3>
-              <p className="modal-sub">Chunk, embed and index documents into your RAG vector database.</p>
+              <p className="modal-sub">Chunk, embed and store documents in your RAG vector database.</p>
             </div>
           </div>
           <button type="button" className="modal-close-btn" onClick={handleCloseModal} aria-label="Close modal">
@@ -166,7 +180,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           onChange={handleFileInputChange}
         />
 
-        {/* Dropzone Area (Clickable & Draggable) */}
+        {/* Dropzone Area */}
         <div
           className={`upload-dropzone ${isDragOver ? 'is-drag-over' : ''} ${selectedFile ? 'has-file' : ''}`}
           onClick={() => fileInputRef.current?.click()}
@@ -188,11 +202,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             {selectedFile ? 'Click or drop to replace document' : 'Click to browse or drag & drop your file'}
           </p>
           <p className="dropzone-secondary-text">
-            Supports PDF, DOCX, Markdown, TXT, or CSV (up to 50MB)
+            Supports PDF, DOCX, Markdown, TXT, CSV, JSON (up to 50MB)
           </p>
         </div>
 
-        {/* Error notification if invalid file */}
+        {/* Error notification */}
         {errorMessage && (
           <div className="upload-error-box">
             <AlertCircle size={16} />
@@ -200,7 +214,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </div>
         )}
 
-        {/* Selected Real File Card */}
+        {/* Selected File Card */}
         {selectedFile && (
           <div className="selected-file-container">
             <div className="selected-file-header">
@@ -249,15 +263,34 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </div>
         )}
 
-        {/* Indexing Success Box */}
+        {/* Indexing Success Box with Real Database & Chunk Info */}
         {status === 'done' && (
           <div className="indexing-success-box">
-            <CheckCircle2 size={22} color="#10b981" />
+            <CheckCircle2 size={24} color="#10b981" />
             <div>
-              <strong>Indexing Complete!</strong>
-              <p>
-                <strong>{selectedFile?.name}</strong> has been vectorized and indexed successfully.
+              <strong style={{ fontSize: '14px', display: 'block', marginBottom: '4px' }}>
+                Document Ingestion Complete!
+              </strong>
+              <p style={{ margin: '0 0 6px 0', fontSize: '12.5px', color: 'var(--color-text-body)' }}>
+                <strong>{selectedFile?.name}</strong> has been vectorized and stored in the database.
               </p>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginTop: '6px' }}>
+                <span className="source-tag" style={{ background: 'rgba(16, 185, 129, 0.1)', color: '#059669' }}>
+                  <Database size={13} style={{ marginRight: '4px' }} />
+                  Backend: {uploadResult?.backend?.toUpperCase() || 'POSTGRES'}
+                </span>
+                {firstDetail && (
+                  <>
+                    <span className="source-tag">
+                      <Layers size={13} style={{ marginRight: '4px' }} />
+                      {firstDetail.chunks_created ?? 0} Chunks Indexed
+                    </span>
+                    <span className="source-tag">
+                      {firstDetail.pages_parsed ?? 1} Page(s) Parsed
+                    </span>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -278,7 +311,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               disabled={!selectedFile || status === 'processing'}
               onClick={handleStartIndexing}
             >
-              {status === 'processing' ? 'Indexing...' : selectedFile ? 'Index Document Now' : 'Select a File to Index'}
+              {status === 'processing' ? 'Indexing into DB...' : selectedFile ? 'Index Document Now' : 'Select a File to Index'}
             </button>
           )}
         </div>

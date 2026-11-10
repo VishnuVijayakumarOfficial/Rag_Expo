@@ -44,11 +44,23 @@ export interface RagTypeData {
   };
 }
 
+export interface FormattedSourceItem {
+  label: string;
+  filename?: string;
+  page?: string | number;
+  score?: number;
+  snippet?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: 'bot' | 'user';
   text: string;
   timestamp: string;
-  sources?: string[];
+  sources?: FormattedSourceItem[];
+  ragType?: RagTypeKey;
+  ragName?: string;
+  metadata?: Record<string, unknown>;
+  isError?: boolean;
   suggestions?: string[];
 }

@@ -7,6 +7,7 @@ import { Footer } from './components/Footer';
 import { UploadModal } from './components/UploadModal';
 import { RAG_DATA_MAP } from './data/ragData';
 import type { RagTypeKey } from './types';
+import { getDocuments } from './services/api';
 import './App.css';
 
 export function App() {
@@ -21,6 +22,19 @@ export function App() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
+
+  // Check if documents are already stored in the vector database
+  useEffect(() => {
+    getDocuments()
+      .then((res) => {
+        if (res.documents && res.documents.length > 0) {
+          setActiveDocument(res.documents[res.documents.length - 1].filename);
+        }
+      })
+      .catch(() => {
+        // Backend might not be running yet on initial render
+      });
+  }, []);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
